@@ -1,13 +1,9 @@
 """Support for switch sensor using I2C MCP23017 chip."""
 import logging
 
-from adafruit_mcp230xx.mcp23017 import MCP23017  # pylint: disable=import-error
-import board  # pylint: disable=import-error
-import busio  # pylint: disable=import-error
-import digitalio  # pylint: disable=import-error
 import voluptuous as vol
 
-from homeassistant.components.mcp23017 import DEVICES as mcp23017Dict
+from homeassistant.components.mcp23017 import mcp23017
 from homeassistant.components.switch import PLATFORM_SCHEMA
 from homeassistant.const import DEVICE_DEFAULT_NAME
 import homeassistant.helpers.config_validation as cv
@@ -34,40 +30,31 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 )
 
 
-def setup_platform(hass, config, add_entities, discovery_info=None):
+async def async_setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up the MCP23017 devices."""
     invert_logic = config.get(CONF_INVERT_LOGIC)
     i2c_address = config.get(CONF_I2C_ADDRESS)
+    pins = config.get(CONF_PINS)
 
-    i2c = busio.I2C(board.SCL, board.SDA)
-
-    with mcp23017Dict:  # Protect global variable access
-        if i2c_address not in mcp23017Dict:
-            mcp23017Dict[i2c_address] = MCP23017(i2c, address=i2c_address)
-
-    mcp = mcp23017Dict[i2c_address]
+    device = await mcp23017.async_get_device(i2c_address)
 
     switches = []
-    pins = config.get(CONF_PINS)
     for pin_num, pin_name in pins.items():
-        pin = mcp.get_pin(pin_num)
-        switches.append(MCP23017Switch(pin_name, pin, invert_logic))
+        switches.append(MCP23017Switch(device, pin_name, pin_num, invert_logic))
+
     add_entities(switches)
 
 
 class MCP23017Switch(ToggleEntity):
     """Representation of a  MCP23017 output pin."""
 
-    def __init__(self, name, pin, invert_logic):
+    def __init__(self, device, name, num, invert_logic):
         """Initialize the pin."""
+        self._device = device
         self._name = name or DEVICE_DEFAULT_NAME
-        self._pin = pin
+        self._num = num
         self._invert_logic = invert_logic
         self._state = False
-
-        with mcp23017Dict:  # Protect device HW access
-            self._pin.direction = digitalio.Direction.OUTPUT
-            self._pin.value = self._invert_logic
 
     @property
     def name(self):
@@ -89,16 +76,19 @@ class MCP23017Switch(ToggleEntity):
         """Return true if optimistic updates are used."""
         return True
 
-    def turn_on(self, **kwargs):
-        """Turn the device on."""
-        with mcp23017Dict:  # Protect device HW access
-            self._pin.value = not self._invert_logic
-        self._state = True
-        self.schedule_update_ha_state()
+    async def async_added_to_hass(self):
+        """Handle entity about to be added to hass event."""
+        await super().async_added_to_hass()
+        await self._device.async_setup_output(self._pin) 
 
-    def turn_off(self, **kwargs):
+    async def async_turn_on(self, **kwargs):
+        """Turn the device on."""
+        await self._device.async_write_output(self._pin, not self._invert_logic)
+        self._state = True
+        self.async_write_ha_state()
+
+    async def async_turn_off(self, **kwargs):
         """Turn the device off."""
-        with mcp23017Dict:  # Protect device HW access
-            self._pin.value = self._invert_logic
+        await self._device.async_write_output(self._pin, self._invert_logic)
         self._state = False
-        self.schedule_update_ha_state()
+        self.async_write_ha_state()

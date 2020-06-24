@@ -1,7 +1,6 @@
 """Support for binary sensor using I2C MCP23017 chip."""
 import logging
 
-from adafruit_mcp230xx.mcp23017 import MCP23017  # pylint: disable=import-error
 import board  # pylint: disable=import-error
 import busio  # pylint: disable=import-error
 import digitalio  # pylint: disable=import-error
