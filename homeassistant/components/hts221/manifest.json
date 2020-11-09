@@ -1,0 +1,8 @@
+{
+  "domain": "hts221",
+  "name": "HTS221 Temperature and Humidity Sensor",
+  "documentation": "https://www.home-assistant.io/integrations/hts221",
+  "dependencies": ["i2c"],
+  "requirements": [],
+  "codeowners": []
+}
