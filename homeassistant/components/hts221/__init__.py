@@ -31,7 +31,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class HTS221:
-    """MCP23017 device driver."""
+    """HTS221 device driver."""
 
     def __init__(self, bus, address):
         """Create a HTS221 instance at {address} on I2C {bus}."""
@@ -98,11 +98,11 @@ class HTS221:
         return False
 
     def __setitem__(self, register, value):
-        """Set MCP23017 {register} to {value}."""
+        """Set HTS221 {register} to {value}."""
         self._bus.write_byte_data(self._address, register, value)
 
     def __getitem__(self, register):
-        """Get value of MCP23017 {register}."""
+        """Get value of HTS221 {register}."""
         data = self._bus.read_byte_data(self._address, register)
         return data
 
