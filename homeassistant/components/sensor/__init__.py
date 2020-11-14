@@ -17,6 +17,7 @@ from homeassistant.const import (
     DEVICE_CLASS_SIGNAL_STRENGTH,
     DEVICE_CLASS_TEMPERATURE,
     DEVICE_CLASS_TIMESTAMP,
+    DEVICE_CLASS_UV,
     DEVICE_CLASS_VOLTAGE,
 )
 from homeassistant.helpers.config_validation import (  # noqa: F401
@@ -46,6 +47,7 @@ DEVICE_CLASSES = [
     DEVICE_CLASS_PRESSURE,  # pressure (hPa/mbar)
     DEVICE_CLASS_POWER,  # power (W/kW)
     DEVICE_CLASS_POWER_FACTOR,  # power factor (%)
+    DEVICE_CLASS_UV,  # UV index
     DEVICE_CLASS_VOLTAGE,  # voltage (V)
 ]
 

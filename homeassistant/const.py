@@ -228,6 +228,7 @@ DEVICE_CLASS_CURRENT = "current"
 DEVICE_CLASS_ENERGY = "energy"
 DEVICE_CLASS_POWER_FACTOR = "power_factor"
 DEVICE_CLASS_VOLTAGE = "voltage"
+DEVICE_CLASS_UV = "uv"
 
 # #### STATES ####
 STATE_ON = "on"
