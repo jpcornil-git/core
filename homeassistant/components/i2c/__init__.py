@@ -157,6 +157,14 @@ class I2cDeviceManager(threading.Thread):
 
             return self._devices[-1]["instance"]
 
+    def read_word_data(self, address, register):
+        """Read a single word from designated register and i2c address."""
+        return self._bus.read_word_data(address, register)
+
+    def write_word_data(self, address, register, value):
+        """Write a single word to designated register and i2c address."""
+        self._bus.write_word_data(address, register, value)
+
     def read_byte_data(self, address, register):
         """Read a single byte from designated register and i2c address."""
         return self._bus.read_byte_data(address, register)
