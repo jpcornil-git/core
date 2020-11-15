@@ -111,6 +111,8 @@ class VEML6075:
 
         return "Error"
 
+    # -- Sensor function(s)
+
     def get_uv_index(self):
         """Return UV index.
 
@@ -139,6 +141,8 @@ class VEML6075:
         uvb = max(0, (uvb_digital * self.coef_uvb_responsivity) / self.coef_integration)
 
         return (uva + uvb) / 2.0
+
+    # -- Called from async thread pool
 
     def register_sensor_callback(self, sensor_name, sensor_function, callback):
         """Register callback for state change."""

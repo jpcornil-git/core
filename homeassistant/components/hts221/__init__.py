@@ -111,6 +111,8 @@ class HTS221:
         """Return device address."""
         return self._address
 
+    # -- Sensor function(s)
+
     def get_temperature(self):
         """Read raw temperature and correct it based on calibration data.
 
@@ -130,6 +132,8 @@ class HTS221:
         return max(
             0, min(100, self._Href_rH + self._Hscale * (float(H_adc) - self._Href_adc))
         )
+
+    # -- Called from async thread pool
 
     def register_sensor_callback(self, sensor_name, sensor_function, callback):
         """Register callback for state change."""

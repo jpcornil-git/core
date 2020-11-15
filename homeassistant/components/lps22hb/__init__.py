@@ -80,6 +80,8 @@ class LPS22HB:
         """Return device address."""
         return self._address
 
+    # -- Sensor function(s)
+
     def get_pressure(self):
         """Read pressure data.
 
@@ -105,6 +107,8 @@ class LPS22HB:
         temperature -= (1 << 16) if (temperature & 0x8000) else 0
 
         return float(temperature) / 100.0
+
+    # -- Called from async thread pool
 
     def register_sensor_callback(self, sensor_name, sensor_function, callback):
         """Register callback for state change."""
