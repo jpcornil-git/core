@@ -1,0 +1,8 @@
+{
+  "domain": "veml6075",
+  "name": "VEML6075 UV Sensor",
+  "documentation": "https://www.home-assistant.io/integrations/veml6075",
+  "dependencies": ["i2c"],
+  "requirements": [],
+  "codeowners": []
+}

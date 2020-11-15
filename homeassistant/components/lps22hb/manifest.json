@@ -1,0 +1,8 @@
+{
+  "domain": "lps22hb",
+  "name": "LPS22HB Pressure Sensor",
+  "documentation": "https://www.home-assistant.io/integrations/lps22hb",
+  "dependencies": ["i2c"],
+  "requirements": [],
+  "codeowners": []
+}
