@@ -2,6 +2,10 @@
 import logging
 import threading
 
+from homeassistant.components.sensor import DEVICE_CLASS_UV
+
+from .const import DEVICE_CLASS_UV_INTENSITY
+
 # VEML6075 Register Map
 R_UV_CONF = 0x00
 R_UVA_Data = 0x07
@@ -24,13 +28,15 @@ _LOGGER = logging.getLogger(__name__)
 class VEML6075:
     """VEML6075 device driver."""
 
-    def __init__(self, bus, address):
+    def __init__(self, bus, address, slowdown):
         """Create a VEML6075 instance at {address} on I2C {bus} with default coefficients."""
         self._bus = bus
         self._address = address
+        self._slowdown = slowdown
+        self._slowdown_counter = 0
 
         self._device_lock = threading.Lock()
-        self._sensor_callbacks = dict()
+        self._entities = dict()
 
         device_id = self[R_ID]
         if device_id != 0x0026:
@@ -52,6 +58,8 @@ class VEML6075:
         self.coef_uvb_visible = float(C_UVB_VISIBLE)
         self.coef_uvb_ir = float(C_UVB_IR)
         self.coef_uvb_responsivity = float(C_UVB_RESPONSIVITY)
+
+        self._bus.register_device(self)
 
         _LOGGER.info("%s @ 0x%02x device created", type(self).__name__, address)
 
@@ -111,8 +119,6 @@ class VEML6075:
 
         return "Error"
 
-    # -- Sensor function(s)
-
     def get_uv_index(self):
         """Return UV index.
 
@@ -142,23 +148,39 @@ class VEML6075:
 
         return (uva + uvb) / 2.0
 
-    # -- Called from async thread pool
-
-    def register_sensor_callback(self, sensor_name, sensor_function, callback):
-        """Register callback for state change."""
+    def register_entity(self, entity):
+        """Register entity to this device instance."""
         with self:
-            self._sensor_callbacks[sensor_name] = {
-                "sensor_function": sensor_function,
-                "callback": callback,
-            }
+            self._entities[entity.device_class] = entity
+
+            _LOGGER.info(
+                "%s('%s') attached to %s@0x%02x",
+                type(entity).__name__,
+                entity.device_class,
+                type(self).__name__,
+                self.address,
+            )
+
+        return True
 
     # -- Called from bus manager thread
 
     def run(self):
         """Poll sensor data and call corresponding callback if it exists."""
         with self:
-            for entry in self._sensor_callbacks.values():
-                # Fetch data
-                value = entry["sensor_function"]()
-                # Call callback function with value
-                entry["callback"](value)
+            self._slowdown_counter -= 1
+            if self._slowdown_counter > 0:
+                return
+
+            self._slowdown_counter = self._slowdown
+
+            for (device_class, entity) in self._entities.items():
+                # Fetch data and call update function
+                if hasattr(entity, "push_update"):
+                    # Fetch data
+                    if device_class == DEVICE_CLASS_UV:
+                        value = self.get_uv_index()
+                    elif device_class == DEVICE_CLASS_UV_INTENSITY:
+                        value = self.str_uv_intensity()
+
+                    entity.push_update(value)

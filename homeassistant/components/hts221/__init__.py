@@ -2,6 +2,11 @@
 import logging
 import threading
 
+from homeassistant.components.sensor import (
+    DEVICE_CLASS_HUMIDITY,
+    DEVICE_CLASS_TEMPERATURE,
+)
+
 # HTS221 Register Map
 R_WHO_AM_I = 0x0F
 R_AV_CONF = 0x10
@@ -33,19 +38,21 @@ _LOGGER = logging.getLogger(__name__)
 class HTS221:
     """HTS221 device driver."""
 
-    def __init__(self, bus, address):
+    def __init__(self, bus, address, slowdown):
         """Create a HTS221 instance at {address} on I2C {bus}."""
         self._bus = bus
         self._address = address
+        self._slowdown = slowdown
+        self._slowdown_counter = 0
 
         self._device_lock = threading.Lock()
-        self._sensor_callbacks = dict()
+        self._entities = dict()
 
         device_id = self[R_WHO_AM_I]
         if device_id != 0xBC:
             # FIXME: Should we bail out somehow here ... ?
             _LOGGER.warning(
-                "%s @ 0x%02x, bad device identification ()",
+                "%s @ 0x%02x, bad device identification (0x%02x)",
                 type(self).__name__,
                 address,
                 device_id,
@@ -85,6 +92,8 @@ class HTS221:
         self._Href_adc = float(H0_adc)
         self._Hscale = float(H1_rH - H0_rH) / 2.0 / (H1_adc - H0_adc)
 
+        self._bus.register_device(self)
+
         _LOGGER.info("%s @ 0x%02x device created", type(self).__name__, address)
 
     def __enter__(self):
@@ -111,8 +120,6 @@ class HTS221:
         """Return device address."""
         return self._address
 
-    # -- Sensor function(s)
-
     def get_temperature(self):
         """Read raw temperature and correct it based on calibration data.
 
@@ -133,23 +140,39 @@ class HTS221:
             0, min(100, self._Href_rH + self._Hscale * (float(H_adc) - self._Href_adc))
         )
 
-    # -- Called from async thread pool
-
-    def register_sensor_callback(self, sensor_name, sensor_function, callback):
-        """Register callback for state change."""
+    def register_entity(self, entity):
+        """Register entity to this device instance."""
         with self:
-            self._sensor_callbacks[sensor_name] = {
-                "sensor_function": sensor_function,
-                "callback": callback,
-            }
+            self._entities[entity.device_class] = entity
+
+            _LOGGER.info(
+                "%s('%s') attached to %s@0x%02x",
+                type(entity).__name__,
+                entity.device_class,
+                type(self).__name__,
+                self.address,
+            )
+
+        return True
 
     # -- Called from bus manager thread
 
     def run(self):
         """Poll sensor data and call corresponding callback if it exists."""
         with self:
-            for entry in self._sensor_callbacks.values():
-                # Fetch data
-                value = entry["sensor_function"]()
-                # Call callback function with value
-                entry["callback"](value)
+            self._slowdown_counter -= 1
+            if self._slowdown_counter > 0:
+                return
+
+            self._slowdown_counter = self._slowdown
+
+            for (device_class, entity) in self._entities.items():
+                # Fetch data and call update function
+                if hasattr(entity, "push_update"):
+                    # Fetch data
+                    if device_class == DEVICE_CLASS_TEMPERATURE:
+                        value = self.get_temperature()
+                    elif device_class == DEVICE_CLASS_HUMIDITY:
+                        value = self.get_humidity()
+
+                    entity.push_update(value)
