@@ -64,6 +64,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
                 i2c_address,
                 error,
             )
+            return
 
         sensor_devices = config[CONF_SENSOR_TYPE]
         sensors = []
