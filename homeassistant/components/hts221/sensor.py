@@ -136,8 +136,10 @@ class HTS221Sensor(Entity):
     @callback
     async def async_push_update(self, value):
         """Update the sensor state."""
-        self._state = f"{value:.1f}"
-        await self.async_schedule_update_ha_state()
+        sValue = f"{value:.1f}"
+        if self._state != sValue:
+            self._state = sValue
+            await self.async_schedule_update_ha_state()
 
     # Sync functions executed outside of the hass async loop
 
